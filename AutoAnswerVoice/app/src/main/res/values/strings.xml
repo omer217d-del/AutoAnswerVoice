@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">AutoAnswer Voice</string>
-    <string name="accessibility_label">AutoAnswer Voice</string>
-    <string name="accessibility_description">Gelen aramaları otomatik yanıtlar ve mesaj oynatır</string>
-</resources>

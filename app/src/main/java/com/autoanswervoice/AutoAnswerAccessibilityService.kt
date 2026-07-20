@@ -14,17 +14,33 @@ class AutoAnswerAccessibilityService : AccessibilityService() {
         var instance: AutoAnswerAccessibilityService? = null
 
         private val ANSWER_KEYWORDS = listOf(
-            "answer", "yanıtla", "kabul", "accept", "cevap",
+            // Genel İngilizce
+            "answer", "accept", "pick up",
+            // Türkçe
+            "yanıtla", "kabul", "cevap", "aç",
+            // Yaygın view ID parçaları (üretici bağımsız)
             "answer_action", "call_accept", "btn_answer",
             "incoming_call_accept", "action_accept_call",
-            "ans_action_bg", "ans_call"
+            "ans_action_bg", "ans_call", "accept_call",
+            "floating_accept_btn", "btnAnswer",
+            // Samsung, Xiaomi, Huawei, OPPO, vb.
+            "key_answer", "endcall",  "ic_answer",
+            "call_button_answer", "answer_btn"
         )
 
         private val END_KEYWORDS = listOf(
-            "end", "bitir", "kapat", "decline", "reject", "hang",
-            "hangup", "end_call", "call_end", "btn_hangup", "btn_end",
+            // Genel İngilizce
+            "end", "decline", "reject", "hang", "hangup",
+            // Türkçe
+            "bitir", "kapat", "reddet",
+            // Yaygın view ID parçaları
+            "end_call", "call_end", "btn_hangup", "btn_end",
             "call_decline", "decline_action", "reject_action",
-            "neg_action_bg", "reject_call", "action_reject_call"
+            "neg_action_bg", "reject_call", "action_reject_call",
+            "floating_reject_btn", "btnDecline",
+            // Samsung, Xiaomi, Huawei, OPPO, vb.
+            "key_endcall", "ic_decline",
+            "call_button_end", "end_btn"
         )
     }
 
@@ -42,14 +58,20 @@ class AutoAnswerAccessibilityService : AccessibilityService() {
     override fun onInterrupt() {}
 
     fun answerCall() {
+        // Önce tüm pencerelerde UI düğmesini bulmayı dene
         if (!tryClickInAllWindows(ANSWER_KEYWORDS)) {
+            // Bulamazsa HEADSETHOOK tuşu simüle et (Bluetooth kulaklık bas-yanıtla)
             sendHeadsetHook()
         }
     }
 
     fun endCall() {
+        // Önce tüm pencerelerde UI düğmesini bulmayı dene
         if (!tryClickInAllWindows(END_KEYWORDS)) {
-            sendHeadsetHook()
+            // Bulamazsa global BACK action'ı dene
+            if (!performGlobalAction(GLOBAL_ACTION_BACK)) {
+                sendHeadsetHook()
+            }
         }
     }
 
@@ -73,20 +95,25 @@ class AutoAnswerAccessibilityService : AccessibilityService() {
     }
 
     private fun clickNode(node: AccessibilityNodeInfo, keywords: List<String>): Boolean {
-        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+        val desc   = node.contentDescription?.toString()?.lowercase() ?: ""
         val viewId = node.viewIdResourceName?.lowercase() ?: ""
-        val text = node.text?.toString()?.lowercase() ?: ""
+        val text   = node.text?.toString()?.lowercase() ?: ""
+        val cls    = node.className?.toString()?.lowercase() ?: ""
 
         if (keywords.any { k -> desc.contains(k) || viewId.contains(k) || text.contains(k) }) {
-            val target = if (node.isClickable) node else {
-                var p = node.parent
-                while (p != null && !p.isClickable) p = p.parent
-                p
-            }
-            if (target != null && target.isClickable) {
+            val target = findClickable(node)
+            if (target != null) {
                 target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 return true
             }
+        }
+
+        // ImageButton / ImageView olan ve içeriği boş düğümleri de dene
+        if ((cls.contains("imagebutton") || cls.contains("imageview")) &&
+            node.isClickable && desc.isEmpty() && text.isEmpty()
+        ) {
+            // Bu tür düğmeler arama ekranında yanıtla/bitir olabilir;
+            // sadece keywords listesiyle eşleşmeyenleri atla
         }
 
         for (i in 0 until node.childCount) {
@@ -94,5 +121,16 @@ class AutoAnswerAccessibilityService : AccessibilityService() {
             if (clickNode(child, keywords)) return true
         }
         return false
+    }
+
+    /** Düğümden veya ata düğümlerden tıklanabilir olanı bul */
+    private fun findClickable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isClickable) return node
+        var parent = node.parent
+        while (parent != null) {
+            if (parent.isClickable) return parent
+            parent = parent.parent
+        }
+        return null
     }
 }

@@ -14,9 +14,8 @@
         android:textColor="#FFFFFF"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:layout_marginBottom="32dp" />
+        android:layout_marginBottom="48dp" />
 
-    <!-- Ana aç/kapat butonu -->
     <Button
         android:id="@+id/btnToggle"
         android:layout_width="200dp"
@@ -25,7 +24,7 @@
         android:textSize="20sp"
         android:textStyle="bold"
         android:backgroundTint="#1565C0"
-        android:layout_marginBottom="32dp" />
+        android:layout_marginBottom="48dp" />
 
     <TextView
         android:id="@+id/tvStatus"
@@ -34,7 +33,7 @@
         android:text="Durum: Bekleniyor"
         android:textColor="#AAAAAA"
         android:textSize="16sp"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="16dp" />
 
     <TextView
         android:id="@+id/tvAccessibility"
@@ -43,7 +42,7 @@
         android:text="Erişilebilirlik: ❌"
         android:textColor="#AAAAAA"
         android:textSize="14sp"
-        android:layout_marginBottom="4dp" />
+        android:layout_marginBottom="8dp" />
 
     <TextView
         android:id="@+id/tvService"
@@ -52,38 +51,7 @@
         android:text="Servis: ❌"
         android:textColor="#AAAAAA"
         android:textSize="14sp"
-        android:layout_marginBottom="4dp" />
-
-    <!-- Hangi ses dosyasının çalınacağını gösterir -->
-    <TextView
-        android:id="@+id/tvAudioSource"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Ses: varsayılan mesaj"
-        android:textColor="#AAAAAA"
-        android:textSize="13sp"
         android:layout_marginBottom="24dp" />
-
-    <!-- Kayıt butonu -->
-    <Button
-        android:id="@+id/btnRecord"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🎙 Ses Kaydı Yap"
-        android:textSize="16sp"
-        android:backgroundTint="#B71C1C"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="12dp" />
-
-    <!-- Kayıt durumu -->
-    <TextView
-        android:id="@+id/tvRecordStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=""
-        android:textColor="#EF9A9A"
-        android:textSize="13sp"
-        android:layout_marginBottom="16dp" />
 
     <Button
         android:id="@+id/btnAccessibility"

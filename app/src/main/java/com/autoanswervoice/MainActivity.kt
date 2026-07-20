@@ -148,15 +148,19 @@ class MainActivity : AppCompatActivity() {
     // ─── UI ──────────────────────────────────────────────────
 
     private fun updateUI() {
-        val accessOn = AutoAnswerAccessibilityService.instance != null
+        val accessOn  = AutoAnswerAccessibilityService.instance != null
         val phonePerm = ContextCompat.checkSelfPermission(
             this, Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED
+        val answerPerm = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ANSWER_PHONE_CALLS
+        ) == PackageManager.PERMISSION_GRANTED
 
         binding.tvAccessibility.text = "Erişilebilirlik: ${if (accessOn) "✅" else "❌"}"
-        binding.tvService.text = "Servis: ${if (serviceRunning) "✅" else "❌"}"
+        binding.tvService.text        = "Servis: ${if (serviceRunning) "✅" else "❌"}"
         binding.tvStatus.text = when {
             !phonePerm     -> "Durum: Telefon izni gerekli"
+            !answerPerm    -> "Durum: 'Aramaları Yanıtla' izni gerekli"
             !accessOn      -> "Durum: Erişilebilirlik servisi gerekli"
             serviceRunning -> "Durum: Çalışıyor — Arama bekleniyor"
             else           -> "Durum: Durduruldu"
@@ -178,7 +182,8 @@ class MainActivity : AppCompatActivity() {
     private fun askPermissions() {
         val perms = mutableListOf(
             Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.RECORD_AUDIO
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ANSWER_PHONE_CALLS   // ← Programatik yanıtlama için
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -195,11 +200,13 @@ class MainActivity : AppCompatActivity() {
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_RECORD &&
-            grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            startRecording()
+        when (requestCode) {
+            REQ_RECORD -> {
+                if (grantResults.isNotEmpty() &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED
+                ) startRecording()
+            }
+            REQ_PERMS -> updateUI()   // İzin sonuçlarına göre UI'ı yenile
         }
     }
 
