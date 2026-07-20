@@ -13,7 +13,6 @@ import android.os.Looper
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import androidx.core.app.NotificationCompat
-import java.io.File
 import java.util.concurrent.Executors
 
 class CallService : Service() {
@@ -24,11 +23,6 @@ class CallService : Service() {
     private var wasRinging = false
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
-
-    /** Kullanıcının kaydettiği dosya (recording.mp3).
-     *  Varsa önce bu çalınır; yoksa assets/message.mp3 yedek olarak kullanılır. */
-    private val recordingFile: File
-        get() = File(getExternalFilesDir(null), "recording.mp3")
 
     inner class CallStateCallback : TelephonyCallback(), TelephonyCallback.CallStateListener {
         override fun onCallStateChanged(state: Int) {
@@ -54,11 +48,7 @@ class CallService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(
-            NOTIF_ID,
-            buildNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-        )
+        startForeground(NOTIF_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         callCallback = CallStateCallback()
         telephonyManager.registerTelephonyCallback(executor, callCallback!!)
@@ -75,43 +65,8 @@ class CallService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    // ─── Ses çalma ───────────────────────────────────────────
-
     private fun playMessage() {
         releasePlayer()
-
-        val custom = recordingFile
-        if (custom.exists() && custom.length() > 0) {
-            // Kullanıcının kişisel kaydını çal
-            playFile(custom)
-        } else {
-            // Yedek: assets içindeki varsayılan mesaj
-            playAsset()
-        }
-    }
-
-    /** Dosya sistemindeki recording.mp3'ü çal */
-    private fun playFile(file: File) {
-        runCatching {
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(file.absolutePath)
-                prepare()
-                start()
-                setOnCompletionListener {
-                    releasePlayer()
-                    handler.postDelayed({
-                        AutoAnswerAccessibilityService.instance?.endCall()
-                    }, 500)
-                }
-            }
-        }.onFailure {
-            // Dosya bozuksa assets'e düş
-            playAsset()
-        }
-    }
-
-    /** assets/message.mp3'ü çal (yedek) */
-    private fun playAsset() {
         runCatching {
             val afd = assets.openFd("message.mp3")
             mediaPlayer = MediaPlayer().apply {
@@ -135,8 +90,6 @@ class CallService : Service() {
         mediaPlayer = null
     }
 
-    // ─── Bildirim ────────────────────────────────────────────
-
     private fun buildNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("AutoAnswer Voice")
@@ -146,16 +99,12 @@ class CallService : Service() {
             .build()
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "AutoAnswer Voice",
-            NotificationManager.IMPORTANCE_LOW
-        )
+        val channel = NotificationChannel(CHANNEL_ID, "AutoAnswer Voice", NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
     companion object {
-        private const val NOTIF_ID  = 1
+        private const val NOTIF_ID = 1
         private const val CHANNEL_ID = "autoanswervoice"
     }
 }
