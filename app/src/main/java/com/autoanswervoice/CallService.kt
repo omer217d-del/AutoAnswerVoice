@@ -29,8 +29,6 @@ class CallService : Service() {
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
 
-    /** Kullanıcının kaydettiği dosya (recording.mp3).
-     *  Varsa önce bu çalınır; yoksa assets/message.mp3 yedek olarak kullanılır. */
     private val recordingFile: File
         get() = File(getExternalFilesDir(null), "recording.mp3")
 
@@ -39,15 +37,13 @@ class CallService : Service() {
             when (state) {
                 TelephonyManager.CALL_STATE_RINGING -> {
                     wasRinging = true
-                    // 1. Önce TelecomManager ile yanıtla (en güvenilir yöntem)
-                    // 2. Başarısız olursa Accessibility Service fallback'i devreye girer
                     answerRingingCall()
                 }
                 TelephonyManager.CALL_STATE_OFFHOOK -> {
                     if (wasRinging) {
                         wasRinging = false
-                        // Arama açıldı: kısa bir gecikme sonra mesajı çal
-                        handler.postDelayed({ playMessage() }, 1000)
+                        // Arama açıldıktan sonra ses kanallarının oturması için 1.5 sn bekle
+                        handler.postDelayed({ playMessage() }, 1500)
                     }
                 }
                 TelephonyManager.CALL_STATE_IDLE -> {
@@ -85,30 +81,24 @@ class CallService : Service() {
 
     override fun onBind(intent: android.content.Intent?): IBinder? = null
 
-    // ─── Aramayı Yanıtlama ───────────────────────────────────
-
     @Suppress("DEPRECATION")
     private fun answerRingingCall() {
-        // Yöntem 1: TelecomManager (API 26+, ANSWER_PHONE_CALLS izni gerekli)
         runCatching {
             val telecom = getSystemService(TELECOM_SERVICE) as TelecomManager
             telecom.acceptRingingCall()
             return
         }
-        // Yöntem 2: Accessibility Service aracılığıyla UI düğmesine tıkla
         AutoAnswerAccessibilityService.instance?.answerCall()
     }
-
-    // ─── Ses Çalma ───────────────────────────────────────────
 
     private fun playMessage() {
         releasePlayer()
 
-        // Mikrofonu sessize al — ortam sesi karşı tarafa gitmesin
-        audioManager.isMicrophoneMute = true
-
-        // Ses modunu arama moduna al
+        // Ses modunu arama moduna al ve hoparlörü aç
         audioManager.mode = AudioManager.MODE_IN_CALL
+        audioManager.isSpeakerphoneOn = true
+
+        // Not: MicrophoneMute bazı telefonlarda ses akışını kestiği için iptal edildi.
 
         val custom = recordingFile
         if (custom.exists() && custom.length() > 0) {
@@ -118,18 +108,12 @@ class CallService : Service() {
         }
     }
 
-    /**
-     * Ses özelliklerini telefon araması kanalına yönlendirir.
-     * USAGE_VOICE_COMMUNICATION ile MediaPlayer'ın sesi hem kulaklıktan
-     * duyulur hem de destekleyen cihazlarda uplink'e (karşı tarafa) iletilir.
-     */
     private fun buildAudioAttributes(): AudioAttributes =
         AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
 
-    /** Dosya sistemindeki recording.mp3'ü çal */
     private fun playFile(file: File) {
         runCatching {
             mediaPlayer = MediaPlayer().apply {
@@ -140,12 +124,10 @@ class CallService : Service() {
                 setOnCompletionListener { onPlaybackComplete() }
             }
         }.onFailure {
-            // Dosya bozuksa assets'e düş
             playAsset()
         }
     }
 
-    /** assets/message.mp3'ü çal (yedek) */
     private fun playAsset() {
         runCatching {
             val afd = assets.openFd("message.mp3")
@@ -168,11 +150,12 @@ class CallService : Service() {
         releasePlayer()
         handler.postDelayed({
             AutoAnswerAccessibilityService.instance?.endCall()
-        }, 500)
+        }, 1000)
     }
 
     private fun restoreAudio() {
         runCatching {
+            audioManager.isSpeakerphoneOn = false
             audioManager.isMicrophoneMute = false
             audioManager.mode = AudioManager.MODE_NORMAL
         }
@@ -183,8 +166,6 @@ class CallService : Service() {
         runCatching { mediaPlayer?.release() }
         mediaPlayer = null
     }
-
-    // ─── Bildirim ────────────────────────────────────────────
 
     private fun buildNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
