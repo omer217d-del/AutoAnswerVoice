@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.autoanswervoice">
 
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- İzinler -->
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.BIND_INCALL_SERVICE" />
 
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AutoAnswerVoice">
 
@@ -27,16 +26,21 @@
             </intent-filter>
         </activity>
 
+        <!-- InCallService Tanımı -->
         <service
             android:name=".CallService"
-            android:foregroundServiceType="mediaPlayback"
-            android:exported="false" />
+            android:permission="android.permission.BIND_INCALL_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.InCallService" />
+            </intent-filter>
+        </service>
 
+        <!-- Erişilebilirlik Servisi (Yedek Yanıtlama Mekanizması) -->
         <service
             android:name=".AutoAnswerAccessibilityService"
-            android:exported="true"
-            android:label="@string/accessibility_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
@@ -45,14 +49,7 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <receiver
-            android:name=".BootReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
     </application>
+
 </manifest>
+
